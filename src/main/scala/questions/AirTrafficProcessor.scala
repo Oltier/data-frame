@@ -1,8 +1,7 @@
 package questions
 
-import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql._
+import org.apache.spark.sql.{DataFrame, SparkSession}
 
 /** AirTrafficProcessor provides functionalites to
   * process air traffic data
@@ -215,7 +214,10 @@ class AirTrafficProcessor(spark: SparkSession,
     * @return airliner descriptions
     */
   def didNotFly(df: DataFrame): DataFrame = {
-    ???
+    val flew = df.select("UniqueCarrier").distinct.collect().map(_.get(0))
+    carriersTable
+      .filter(!carriersTable("Code").isin(flew:_*))
+      .select("Description")
   }
 
   /** Find the airliners which travel
