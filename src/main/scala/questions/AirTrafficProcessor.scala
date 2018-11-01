@@ -1,7 +1,8 @@
 package questions
 
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import org.apache.spark.sql.functions.col
+import org.apache.spark.sql.functions._
+import org.apache.spark.sql._
 
 /** AirTrafficProcessor provides functionalites to
   * process air traffic data
@@ -24,6 +25,7 @@ import org.apache.spark.sql.functions.col
   * @param airportsPath path to the airport data
   * @param carriersPath path to the carrier data
   */
+//noinspection ScalaDocParserErrorInspection
 class AirTrafficProcessor(spark: SparkSession,
                           filePath: String, airportsPath: String, carriersPath: String) {
 
@@ -110,6 +112,7 @@ class AirTrafficProcessor(spark: SparkSession,
     * @param path absolute path to the csv file.
     * @return created DataFrame with correct column types.
     */
+  //noinspection ScalaDocUnclosedTagWithoutParser
   def loadDataAndRegister(path: String): DataFrame = {
     spark.read.format("csv")
       .option("nullValue", "NA")
@@ -168,7 +171,7 @@ class AirTrafficProcessor(spark: SparkSession,
     */
   def cancelledDueToSecurity(df: DataFrame): DataFrame = {
     df.select("FlightNum", "Dest")
-      .filter("CancellationCode = 'D'")
+      .filter(df("CancellationCode") === "D")
   }
 
   /** What was the longest weather delay between January
@@ -185,7 +188,14 @@ class AirTrafficProcessor(spark: SparkSession,
     *         was due to weather.
     */
   def longestWeatherDelay(df: DataFrame): DataFrame = {
-    ???
+    df.filter {
+      val date = getDate(df)
+      date.geq("2008-01-01") && date.leq("2008-03-31")
+    }.agg(max("WeatherDelay"))
+  }
+
+  private def getDate(df: DataFrame) = {
+    to_date(concat_ws("-", df("Year"), df("Month"), df("DayofMonth")))
   }
 
   /** Which airliners didn't fly.
