@@ -244,7 +244,14 @@ class AirTrafficProcessor(spark: SparkSession,
     *         in descending order.
     */
   def flightsFromVegasToJFK(df: DataFrame): DataFrame = {
-    ???
+    val flyBetweenVegasToJFKWithCount = df.filter(df("Origin") === "LAS" && df("Dest") === "JFK")
+      .groupBy("UniqueCarrier")
+      .agg(count("*").as("Num"))
+      .sort(desc("Num"))
+
+    carriersTable
+      .join(flyBetweenVegasToJFKWithCount, flyBetweenVegasToJFKWithCount("UniqueCarrier") === carriersTable("Code"))
+      .select("Description", "Num")
   }
 
   /** How much time airplanes spend on moving from
