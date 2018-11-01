@@ -1,6 +1,7 @@
 package questions
 
 import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.functions.col
 
 /** AirTrafficProcessor provides functionalites to
   * process air traffic data
@@ -141,7 +142,10 @@ class AirTrafficProcessor(spark: SparkSession,
     *         are TailNum and count
     */
   def flightCount(df: DataFrame): DataFrame = {
-    ???
+    df.select("TailNum")
+      .groupBy("TailNum")
+      .count()
+      .sort("count")
   }
 
 
@@ -163,7 +167,8 @@ class AirTrafficProcessor(spark: SparkSession,
     *         Columns FlightNum and Dest are included.
     */
   def cancelledDueToSecurity(df: DataFrame): DataFrame = {
-    ???
+    df.select("FlightNum", "Dest")
+      .filter("CancellationCode = 'D'")
   }
 
   /** What was the longest weather delay between January
