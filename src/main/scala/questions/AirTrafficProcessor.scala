@@ -298,7 +298,9 @@ class AirTrafficProcessor(spark: SparkSession,
     * @return DataFrame containing the median value
     */
   def distanceMedian(df: DataFrame): DataFrame = {
-    ???
+    //TODO Probably shit
+    df.createOrReplaceTempView("df_local_distance_median")
+    df.sqlContext.sql("SELECT percentile_approx(Distance, 0.50) as _c0 FROM df_local_distance_median")
   }
 
   /** What is the carrier delay, below which 95%
@@ -314,7 +316,8 @@ class AirTrafficProcessor(spark: SparkSession,
     * @return DataFrame containing the carrier delay
     */
   def score95(df: DataFrame): DataFrame = {
-    ???
+    df.createOrReplaceTempView("df_local_score_95")
+    df.sqlContext.sql("SELECT percentile_approx(CarrierDelay, 0.95) as _c0 FROM df_local_score_95")
   }
 
 
