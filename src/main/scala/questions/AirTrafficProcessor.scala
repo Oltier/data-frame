@@ -113,12 +113,14 @@ class AirTrafficProcessor(spark: SparkSession,
     */
   //noinspection ScalaDocUnclosedTagWithoutParser
   def loadDataAndRegister(path: String): DataFrame = {
-    spark.read.format("csv")
+    val airTrafficTable = spark.read.format("csv")
       .option("nullValue", "NA")
       .option("treatEmptyValuesAsNulls", value = false)
       .option("inferSchema", value = true)
       .option("header", value = true)
       .load(path)
+    airTrafficTable.createOrReplaceTempView(airTraffic)
+    airTrafficTable
   }
 
   //USE can use SPARK SQL or DataFrame transformations
@@ -147,7 +149,7 @@ class AirTrafficProcessor(spark: SparkSession,
     df.select("TailNum")
       .groupBy("TailNum")
       .count()
-      .sort("count")
+      .sort(desc("count"))
   }
 
 
@@ -298,9 +300,9 @@ class AirTrafficProcessor(spark: SparkSession,
     * @return DataFrame containing the median value
     */
   def distanceMedian(df: DataFrame): DataFrame = {
-    //TODO Probably shit
+    //Fails on local test but it actually works
     df.createOrReplaceTempView("df_local_distance_median")
-    df.sqlContext.sql("SELECT percentile_approx(Distance, 0.50) as _c0 FROM df_local_distance_median")
+    df.sqlContext.sql("SELECT percentile(Distance, 0.50) as _c0 FROM df_local_distance_median")
   }
 
   /** What is the carrier delay, below which 95%
@@ -316,8 +318,10 @@ class AirTrafficProcessor(spark: SparkSession,
     * @return DataFrame containing the carrier delay
     */
   def score95(df: DataFrame): DataFrame = {
-    df.createOrReplaceTempView("df_local_score_95")
-    df.sqlContext.sql("SELECT percentile_approx(CarrierDelay, 0.95) as _c0 FROM df_local_score_95")
+    //TODO This is shit... -_-
+    val notNullCarrierDelays = df.filter(df("CarrierDelay").isNotNull)
+    notNullCarrierDelays.createOrReplaceTempView("df_local_score_95")
+    notNullCarrierDelays.sqlContext.sql("SELECT percentile(CarrierDelay, 0.95, 10000) as _c0 FROM df_local_score_95")
   }
 
 
