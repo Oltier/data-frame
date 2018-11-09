@@ -299,7 +299,7 @@ class AirTrafficProcessor(spark: SparkSession,
 
     unionTaxiing
       .select(col("airport"), (col("sum") / col("count")).alias("taxi"))
-        .sort("taxi")
+      .sort("taxi")
   }
 
   /** What is the median travel distance?
@@ -369,7 +369,23 @@ class AirTrafficProcessor(spark: SparkSession,
     * @return DataFrame containing columns airport, city and percentage
     */
   def cancelledFlights(df: DataFrame): DataFrame = {
-    ???
+    val countCancelled = df
+      .groupBy("Origin")
+      .agg(sum(col("Cancelled")).alias("cancelled"))
+
+    val countAllFlights = df
+      .groupBy("Origin")
+      .agg(count(col("Cancelled")).alias("allCount"))
+
+    val cancellationPercentageByOrigin = countCancelled
+      .join(countAllFlights, "Origin")
+      .select(col("Origin"), (col("cancelled") / col("allCount")).alias("percentage"))
+
+    cancellationPercentageByOrigin
+      .join(airportsTable, cancellationPercentageByOrigin("Origin") === airportsTable("iata"))
+      .select(col("airport"), col("city"), col("percentage"))
+      .filter(col("percentage") > 0.0)
+      .sort(desc("percentage"), desc("airport"))
   }
 
   /**
@@ -386,7 +402,20 @@ class AirTrafficProcessor(spark: SparkSession,
     * @return tuple, which has the constant term first and the slope second
     */
   def leastSquares(df: DataFrame): (Double, Double) = {
-    ???
+    val depDelays = df
+      .select(col("DepDelay"))
+      .filter(col("DepDelay") >= 0)
+
+    val weatherDelays = df
+      .select(col("WeatherDelay"))
+        .filter(col("WeatherDelay") >= 0)
+
+    depDelays.show()
+    println(depDelays.collect().length)
+
+    weatherDelays.show()
+    println(weatherDelays.collect().length)
+    (0.0, 0.0)
   }
 
   /**

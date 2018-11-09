@@ -25,8 +25,7 @@ object Main {
     val processor = new AirTrafficProcessor(spark, filePath, airportsPath, carriersPath)
     val data = processor.loadDataAndRegister(filePath)
 
-    processor.timeSpentTaxiing(data)
-      .show()
+    println(processor.leastSquares(data))
 
     //println(data.schema)
     //data.collect().foreach(println)
