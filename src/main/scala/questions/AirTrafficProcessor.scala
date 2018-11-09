@@ -218,7 +218,7 @@ class AirTrafficProcessor(spark: SparkSession,
   def didNotFly(df: DataFrame): DataFrame = {
     val flew = df.select("UniqueCarrier").distinct.collect().map(_.get(0))
     carriersTable
-      .filter(!carriersTable("Code").isin(flew:_*))
+      .filter(!carriersTable("Code").isin(flew: _*))
       .select("Description")
   }
 
@@ -284,7 +284,22 @@ class AirTrafficProcessor(spark: SparkSession,
     *         airport ordered in ascending order.
     */
   def timeSpentTaxiing(df: DataFrame): DataFrame = {
-    ???
+    val taxiInAtOrigin = df
+      .groupBy(col("Origin").alias("airport"))
+      .agg(sum(col("TaxiIn")).alias("taxiIn"), count("TaxiIn").alias("taxiInCount"))
+
+    val taxiOutAtArrival = df
+      .groupBy(col("Dest").alias("airport"))
+      .agg(sum(col("TaxiOut")).alias("taxiOut"), count("TaxiIn").alias("taxiOutCount"))
+
+    val unionTaxiing = taxiInAtOrigin
+      .union(taxiOutAtArrival)
+      .groupBy("airport")
+      .agg(sum(col("taxiIn")).alias("sum"), sum(col("taxiInCount")).alias("count"))
+
+    unionTaxiing
+      .select(col("airport"), (col("sum") / col("count")).alias("taxi"))
+        .sort("taxi")
   }
 
   /** What is the median travel distance?
@@ -300,7 +315,6 @@ class AirTrafficProcessor(spark: SparkSession,
     * @return DataFrame containing the median value
     */
   def distanceMedian(df: DataFrame): DataFrame = {
-    //Fails on local test but it actually works
     df.createOrReplaceTempView("df_local_distance_median")
     df.sqlContext.sql("SELECT percentile(Distance, 0.50) as _c0 FROM df_local_distance_median")
   }
@@ -318,10 +332,10 @@ class AirTrafficProcessor(spark: SparkSession,
     * @return DataFrame containing the carrier delay
     */
   def score95(df: DataFrame): DataFrame = {
-    //TODO This is shit... -_-
+    //TODO This is not correct for some reason
     val notNullCarrierDelays = df.filter(df("CarrierDelay").isNotNull)
     notNullCarrierDelays.createOrReplaceTempView("df_local_score_95")
-    notNullCarrierDelays.sqlContext.sql("SELECT percentile(CarrierDelay, 0.95, 10000) as _c0 FROM df_local_score_95")
+    notNullCarrierDelays.select(callUDF("percentile_approx", col("CarrierDelay"), lit(0.95))).alias("_c0")
   }
 
 
